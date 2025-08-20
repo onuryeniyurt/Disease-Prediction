@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Disease Prediction</title>
+  <style>
+    body {
+  font-family: Arial, sans-serif;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 20px;
+  position: relative;
+  z-index: 0;
+}
+
+body::before {
+  content: "";
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-image: url("{{ url_for('static', filename='hospital.jpg') }}");
+  background-size: cover;
+  background-repeat: no-repeat;
+  background-position: center;
+  filter: blur(10px);
+  transform: scale(1.1);
+  z-index: -1;
+}
+
+  #symptoms-container { margin: 20px 0; background:rgba(121,179,179,0.7);
+     border-radius:20px; padding:30px; display: grid;
+    grid-template-columns: repeat(4, 1fr); column-gap:10px;  row-gap: 10px;}
+    .symptom-item { margin: 5px 0; break-inside: avoid; word-break: break-word;}
+  button { padding: 10px 20px; font-size: 16px; cursor: pointer; }
+  #result { margin-top: 20px; padding: 15px; background: #f0f0f0; border-radius: 5px; }
+  </style>
+</head>
+<body>
+  <h1 style="text-align: center; color:white;">Welcome to Disease Predictor! Select your symptoms</h1>
+
+  <div id="symptoms-container">
+    {% for s in symptoms %}
+      <div class="symptom-item">
+        <input type="checkbox" id="symptom-{{ loop.index }}" name="symptoms" value="{{ s }}">
+        <label for="symptom-{{ loop.index }}">{{ s }}</label>
+      </div>
+    {% endfor %}
+  </div>
+
+  <button type="button" onclick="sendData()">Predict</button>
+
+  <div id="result"></div>
+
+<script>
+  function sendData() {
+    const checkboxes = document.querySelectorAll('input[name="symptoms"]:checked');
+    const selected = Array.from(checkboxes).map(cb => cb.value);
+
+    if (selected.length === 0) {
+      document.getElementById("result").innerHTML = "Please select at least one symptom.";
+      return;
+    }
+
+    fetch("/predict", {
+      method: "POST",
+      headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({symptoms: selected})
+    })
+    .then(res => res.json())
+    .then(data => {
+
+  let precautionsHTML = "";
+  if (data.precautions && data.precautions.length > 0) {
+    precautionsHTML = "<br><b>Precautions:</b><ul>" +
+      data.precautions.map(p => `<li>${p}</li>`).join("") +
+      "</ul>";
+  }
+
+  let descriptionHTML = "";
+  if (data.description && String(data.description).length > 0) {
+    descriptionHTML = `<br><b>Description:</b> ${data.description}`;
+  }
+
+  document.getElementById("result").innerHTML =
+    `<b>Prediction:</b> ${data.prediction}
+     ${descriptionHTML}
+     <br><b>Selected symptoms:</b> ${selected.join(", ")}
+     ${precautionsHTML}`;
+  })
+    .catch(error => {
+      console.error('Error:', error);
+      document.getElementById("result").innerHTML =
+        "Error making prediction.";
+    });
+  }
+</script>
+
+</body>
+</html>
